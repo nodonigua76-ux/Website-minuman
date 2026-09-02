@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pesan Minuman</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f5f7fb;color:#20242a}
+header{background:#111827;color:white;padding:28px 18px;text-align:center}
+header h1{margin:0 0 8px;font-size:30px}
+header p{margin:0;color:#d1d5db}
+.container{max-width:900px;margin:auto;padding:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:15px}
+.card{background:white;border-radius:16px;padding:16px;box-shadow:0 4px 15px #00000010}
+.card .emoji{font-size:48px;text-align:center}
+.card h3{margin:10px 0 5px}
+.price{font-weight:bold;margin:8px 0 14px}
+button{border:0;border-radius:10px;padding:11px 15px;background:#2563eb;color:white;font-weight:bold;cursor:pointer}
+button:hover{opacity:.9}
+.cart{margin-top:25px;background:white;border-radius:16px;padding:18px;box-shadow:0 4px 15px #00000010}
+.cart-row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:10px 0;gap:10px}
+.qty button{padding:5px 9px}
+.total{font-size:20px;font-weight:bold;margin:18px 0}
+input,textarea{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;margin:6px 0 12px;font-size:15px}
+.order{width:100%;background:#16a34a;font-size:16px}
+.small{font-size:13px;color:#6b7280}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🥤 Kedai Minuman</h1>
+  <p>Pesan minuman favoritmu dengan mudah</p>
+</header>
+
+<div class="container">
+  <h2>Daftar Minuman</h2>
+  <div class="grid" id="products"></div>
+
+  <div class="cart">
+    <h2>🛒 Pesanan Kamu</h2>
+    <div id="cart"></div>
+    <div class="total">Total: <span id="total">Rp0</span></div>
+
+    <label>Nama</label>
+    <input id="name" placeholder="Nama pemesan">
+
+    <label>Alamat / Lokasi</label>
+    <textarea id="address" rows="3" placeholder="Alamat atau lokasi pengantaran"></textarea>
+
+    <button class="order" onclick="sendOrder()">Pesan via WhatsApp</button>
+    <p class="small">Nomor WhatsApp toko bisa diganti di bagian pengaturan kode.</p>
+  </div>
+</div>
+
+<script>
+// ===============================
+// EDIT DATA MINUMAN DI SINI
+// ===============================
+const products = [
+  {id:1,name:"Es Teh",price:5000,emoji:"🧋"},
+  {id:2,name:"Es Jeruk",price:7000,emoji:"🍊"},
+  {id:3,name:"Cokelat",price:10000,emoji:"🍫"},
+  {id:4,name:"Kopi Susu",price:12000,emoji:"☕"},
+  {id:5,name:"Matcha",price:13000,emoji:"🍵"},
+  {id:6,name:"Thai Tea",price:10000,emoji:"🥤"}
+];
+
+// GANTI dengan nomor WhatsApp toko.
+// Format: kode negara tanpa +, contoh Indonesia 628xxxxxxxxxx
+const WHATSAPP = "6285863044410";
+
+let cart = {};
+
+const rupiah = n => "Rp" + n.toLocaleString("id-ID");
+
+function renderProducts(){
+  document.getElementById("products").innerHTML = products.map(p => `
+    <div class="card">
+      <div class="emoji">${p.emoji}</div>
+      <h3>${p.name}</h3>
+      <div class="price">${rupiah(p.price)}</div>
+      <button onclick="add(${p.id})">+ Tambah</button>
+    </div>
+  `).join("");
+}
+
+function add(id){
+  cart[id] = (cart[id] || 0) + 1;
+  renderCart();
+}
+
+function change(id,amount){
+  cart[id] = (cart[id] || 0) + amount;
+  if(cart[id] <= 0) delete cart[id];
+  renderCart();
+}
+
+function renderCart(){
+  const ids = Object.keys(cart);
+  if(!ids.length){
+    document.getElementById("cart").innerHTML = "<p>Belum ada pesanan.</p>";
+    document.getElementById("total").textContent = "Rp0";
+    return;
+  }
+
+  let total = 0;
+  document.getElementById("cart").innerHTML = ids.map(id => {
+    const p = products.find(x => x.id == id);
+    const qty = cart[id];
+    total += p.price * qty;
+    return `
+      <div class="cart-row">
+        <div><b>${p.name}</b><br>${rupiah(p.price)} × ${qty}</div>
+        <div class="qty">
+          <button onclick="change(${p.id},-1)">−</button>
+          <button onclick="change(${p.id},1)">+</button>
+        </div>
+      </div>`;
+  }).join("");
+
+  document.getElementById("total").textContent = rupiah(total);
+}
+
+function sendOrder(){
+  const name = document.getElementById("name").value.trim();
+  const address = document.getElementById("address").value.trim();
+
+  if(!Object.keys(cart).length) return alert("Tambahkan minuman terlebih dahulu.");
+  if(!name) return alert("Isi nama pemesan.");
+  if(!address) return alert("Isi alamat atau lokasi.");
+
+  let total = 0;
+  let message = `Halo, saya mau pesan:%0A%0A`;
+
+  Object.keys(cart).forEach(id => {
+    const p = products.find(x => x.id == id);
+    const qty = cart[id];
+    total += p.price * qty;
+    message += `• ${p.name} x${qty} = ${rupiah(p.price*qty)}%0A`;
+  });
+
+  message += `%0ATotal: ${rupiah(total)}%0A`;
+  message += `Nama: ${encodeURIComponent(name)}%0A`;
+  message += `Lokasi: ${encodeURIComponent(address)}`;
+
+  window.open(`https://wa.me/${WHATSAPP}?text=${message}`, "_blank");
+}
+
+renderProducts();
+renderCart();
+</script>
+</body>
+</html>
